@@ -1,0 +1,14 @@
+{
+  "name": "pphg-brazedemo-registration",
+  "version": "1.0.0",
+  "description": "Braze Platform Demo Registration",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "ky": "^1.7.4"
+  }
+}
