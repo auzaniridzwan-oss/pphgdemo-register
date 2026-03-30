@@ -7,9 +7,14 @@
  * Levels  : INFO, DEBUG, WARN, ERROR
  * Categories: [UI], [SDK], [AUTH], [STORAGE], [SYSTEM], [API]
  *
- * In production (non-localhost) only WARN and ERROR are printed to the
- * console. All entries are buffered in memory for the getLogs() export
- * and surfaced in the developer debug overlay.
+ * All entries are buffered in a ring buffer for `getLogs()` export and the
+ * developer debug overlay (`app:log` events).
+ *
+ * Browser console output:
+ * - Always: WARN, ERROR, and any log with category `[API]` (backend / proxy traffic).
+ * - When DEBUG_MODE (localhost, 127.0.0.1, or StorageManager `debug_mode`): all levels
+ *   and categories.
+ * Uses level-appropriate `console.debug` / `info` / `warn` / `error` with `%c` styling.
  */
 export const AppLogger = {
   /** @type {Array<{timestamp:string, level:string, category:string, message:string, data:*}>} */
@@ -33,7 +38,7 @@ export const AppLogger = {
   },
 
   /**
-   * Core log method. Buffers the entry and conditionally prints to console.
+   * Core log method. Buffers the entry and conditionally prints to the browser console.
    *
    * @param {'INFO'|'DEBUG'|'WARN'|'ERROR'} level
    * @param {string} category - e.g. '[UI]', '[API]'
@@ -52,16 +57,37 @@ export const AppLogger = {
       window.dispatchEvent(new CustomEvent('app:log', { detail: logEntry }));
     }
 
-    const shouldPrint = this.DEBUG_MODE || level === 'ERROR' || level === 'WARN';
+    const isApiCategory = category === '[API]';
+    const shouldPrint =
+      this.DEBUG_MODE || level === 'ERROR' || level === 'WARN' || isApiCategory;
     if (!shouldPrint) return;
+
+    if (typeof console === 'undefined') return;
 
     const color = this._getColor(level);
     const label = `%c[${timestamp}] ${category} [${level}]: ${message}`;
+    const style = `color: ${color}; font-weight: bold;`;
 
+    const fn = this._consoleFn(level);
     if (data !== null) {
-      console.log(label, `color: ${color}; font-weight: bold;`, data);
+      fn(label, style, data);
     } else {
-      console.log(label, `color: ${color}; font-weight: bold;`);
+      fn(label, style);
+    }
+  },
+
+  /**
+   * Maps log level to the matching `console` method for DevTools filtering.
+   *
+   * @param {'INFO'|'DEBUG'|'WARN'|'ERROR'} level
+   * @returns {function}
+   */
+  _consoleFn(level) {
+    switch (level) {
+      case 'DEBUG': return console.debug.bind(console);
+      case 'WARN':  return console.warn.bind(console);
+      case 'ERROR': return console.error.bind(console);
+      default:      return console.info.bind(console);
     }
   },
 

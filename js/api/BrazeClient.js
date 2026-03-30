@@ -98,12 +98,12 @@ export const BrazeClient = {
       hooks: {
         beforeRequest: [
           request => {
-            AppLogger.debug('[API]', `→ ${request.method} ${request.url}`);
+            AppLogger.info('[API]', `→ ${request.method} ${request.url}`);
           },
         ],
         afterResponse: [
           async (_req, _opts, response) => {
-            AppLogger.debug('[API]', `← ${response.status} ${response.url}`);
+            AppLogger.info('[API]', `← ${response.status} ${response.url}`);
             return response;
           },
         ],
